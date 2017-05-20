@@ -91,6 +91,7 @@ public class ScrollViewByScroller extends View {
                 Log.i(tag, "--ACTION_UP----scrollX:" + scrollX + "----scrollY:" + scrollY);
                 //这里把ScrollX作为起始位置，目的地为他们的负数，即偏移量为0的位置，也是view在没有移动之前的位置。
                 //注意这里的参数：正数左上，负数右下。
+                //如果从左向右滑动，那么mScrollX为负值，反之为正值。如果从上往下滑动，mScrollY为负值，反之为正值。
                 scroller.startScroll(scrollX, scrollY, -scrollX, -scrollY, 800);
                 //刷新view.
                 invalidate();
