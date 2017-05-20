@@ -1,4 +1,4 @@
-package com.scroll.ranger;
+package com.scroll.ranger.scrollview;
 
 import android.content.Context;
 import android.support.annotation.Nullable;
@@ -7,6 +7,8 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+
+import com.scroll.ranger.R;
 
 /**
  * Created by fcl on 2017/5/20.
