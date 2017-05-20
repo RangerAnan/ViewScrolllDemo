@@ -2,7 +2,7 @@
 ## view滑动实现
 ### 1.layout方法实现 <br/>
     layout(getLeft() + offsetX, getTop() + offsetY, getRight() + offsetX, getBottom() + offsetY);
-notice：layout方法的参数是相对于parentView来确定的。
+### notice：layout方法的参数是相对于parentView来确定的。
 ### 2.使用view的offsetLeftAndRight方法来实现移动<br/>
      offsetLeftAndRight(offsetX);
      offsetTopAndBottom(offsetY);
