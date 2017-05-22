@@ -3,14 +3,16 @@ package com.scroll.ranger.scroller;
 import android.app.Activity;
 import android.content.Context;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.view.ViewGroup;
-import android.widget.Scroller;
+import android.widget.LinearLayout;
+import android.widget.OverScroller;
 
+import com.scroll.ranger.R;
 import com.scroll.ranger.util.DeviceUtil;
 
 /**
@@ -24,9 +26,9 @@ import com.scroll.ranger.util.DeviceUtil;
  * (3)viewpager每个childView不全屏显示
  */
 
-public class ScrollerViewPager extends ViewGroup {
+public class ScrollerViewPager extends LinearLayout {
 
-    private Scroller overScroller;                                          //滑动辅助类
+    private OverScroller overScroller;                                      //滑动辅助类
     private int mTouchSlop;                                                //系统所能识别的最小滑动距离
 
     private int leftBorder;                                                //界面可滚动的左边界
@@ -39,6 +41,7 @@ public class ScrollerViewPager extends ViewGroup {
     private String tag = "ScrollerViewPager";
 
     private int childViewWidth;                                             //childView的高度
+    private int childViewBorder = DeviceUtil.dp2px(20);                    //childView左右留出的宽度，用于显示其他的childView
 
     public ScrollerViewPager(Context context) {
         super(context);
@@ -57,12 +60,12 @@ public class ScrollerViewPager extends ViewGroup {
     }
 
     private void init(Context context) {
-        overScroller = new Scroller(context);
+        overScroller = new OverScroller(context);
         ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
         mTouchSlop = viewConfiguration.getScaledPagingTouchSlop();
         int screenWidth = DeviceUtil.getScreenWidth((Activity) context);
-        childViewWidth = screenWidth - DeviceUtil.dp2px(20);
-
+        childViewWidth = screenWidth - childViewBorder;
+        setBackgroundColor(ContextCompat.getColor(context, R.color.colorNo2));
     }
 
     @Override
@@ -86,9 +89,11 @@ public class ScrollerViewPager extends ViewGroup {
             View childView = getChildAt(i);
 //            Log.i(tag, "--getChildCount:" + getChildCount() + "---childViewWidth:" + childViewWidth + "--" + childView.getMeasuredHeight());
 //            Log.i(tag, "--getChildHeight--getHeight:" + childView.getHeight() + "--getMeasuredHeight:" + childView.getMeasuredHeight());
-            LayoutParams layoutParams = childView.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LayoutParams) childView.getLayoutParams();
             layoutParams.width = childViewWidth;
+            Log.i(tag, "--onFinishInflate:" + layoutParams.leftMargin);
             childView.setLayoutParams(layoutParams);
+
         }
     }
 
@@ -99,15 +104,21 @@ public class ScrollerViewPager extends ViewGroup {
         }
         //layout childView
         int childCount = getChildCount();
+        int childViewLeft = 0;
         for (int i = 0; i < childCount; i++) {
             View childAt = getChildAt(i);
             // layout all childView on the horizontal
             //水平方向子view一路排开，但是当前可见的只有一个，其他子view都在屏幕外
-            childAt.layout(i * childAt.getMeasuredWidth(), 0, (i + 1) * childAt.getMeasuredWidth(), childAt.getMeasuredHeight());
+            if (i == 0) {
+                childViewLeft = i * childAt.getMeasuredWidth() + childViewBorder;
+            } else {
+                childViewLeft = i * childAt.getMeasuredWidth();
+            }
+            childAt.layout(childViewLeft, 0, (i + 1) * childAt.getMeasuredWidth(), childAt.getMeasuredHeight());
         }
 
-        leftBorder = getChildAt(0).getLeft();
-        rightBorder = getChildAt(childCount - 1).getRight();
+        leftBorder = getChildAt(0).getLeft() + childViewBorder;
+        rightBorder = getChildAt(childCount - 1).getRight() + childViewBorder;
         Log.i(tag, "--leftBorder:" + leftBorder + "----rightBorder:" + rightBorder);
     }
 
@@ -124,12 +135,12 @@ public class ScrollerViewPager extends ViewGroup {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 //按下时记录位置
-                xDown = (int) ev.getRawX();
+                xDown = (int) ev.getX();
                 xLastPosition = xDown;
                 break;
             case MotionEvent.ACTION_MOVE:
                 //计算offset，拦截事件
-                xMove = (int) ev.getRawX();
+                xMove = (int) ev.getX();
                 xLastPosition = xMove;
                 Log.i(tag, "---onInterceptTouchEvent---xMove---" + xMove);
                 if (Math.abs(xMove - xDown) > mTouchSlop) {
@@ -154,11 +165,11 @@ public class ScrollerViewPager extends ViewGroup {
                 return true;
 
             case MotionEvent.ACTION_MOVE:
-                xMove = (int) event.getRawX();
+                xMove = (int) event.getX();
                 int scrollX = xLastPosition - xMove;
                 Log.i(tag, "--onTouchEvent--scrollX:" + scrollX + "---xLastPosition:" + xLastPosition + "---xMove:" + xMove);
                 if (getScrollX() + scrollX < leftBorder) {
-//                    Log.i(tag, "--onTouchEvent--leftBorder:" + leftBorder + "---getScrollX():" + getScrollX() + "---scrollX:" + scrollX);
+                    Log.i(tag, "--onTouchEvent--leftBorder:" + leftBorder + "---getScrollX():" + getScrollX() + "---scrollX:" + scrollX);
                     scrollTo(leftBorder, 0);
                     return true;
                 } else if (getScrollX() + getWidth() + scrollX > rightBorder) {
@@ -176,7 +187,15 @@ public class ScrollerViewPager extends ViewGroup {
                 int childViewIndex = (int) ((getScrollX() + childViewWidth / 2) / childViewWidth);
                 //offset
                 int dx = (int) (childViewIndex * childViewWidth - getScrollX());
-                Log.i(tag, "----childViewIndex:" + childViewIndex + "---" + "---" + getScrollX() + "---dx:" + dx);
+                Log.i(tag, "----childViewIndex:" + childViewIndex + "---getScrollX:" + getScrollX() + "---dx:" + dx);
+                if (dx < 0) {
+                    //向左滑
+
+                } else {
+                    //向右滑
+
+
+                }
                 //开始弹性滑动:
                 overScroller.startScroll(getScrollX(), 0, dx, 0);
                 invalidate();
