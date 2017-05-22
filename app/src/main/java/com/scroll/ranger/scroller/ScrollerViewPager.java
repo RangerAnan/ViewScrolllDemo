@@ -1,5 +1,6 @@
 package com.scroll.ranger.scroller;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -10,12 +11,16 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.Scroller;
 
+import com.scroll.ranger.util.DeviceUtil;
+
 /**
  * Created by fcl on 2017/5/20.
  * description:使用scroller实现viewpager的效果
  * todo:
  * (1)ViewPager会根据用户手指滑动速度的快慢来决定是否要翻页
  * (2)子view只能使用clickable=true的控件
+ * solution:
+ * ViewGroup的onTouchEvent默认返回false，将事件传给childView，TextView的onTouchEvent默认也返回false，事件再上传时ViewGroup也不会消费事件，导致无法移动。
  * (3)viewpager每个childView不全屏显示
  */
 
@@ -32,6 +37,8 @@ public class ScrollerViewPager extends ViewGroup {
     private int xMove;
 
     private String tag = "ScrollerViewPager";
+
+    private int childViewWidth;                                             //childView的高度
 
     public ScrollerViewPager(Context context) {
         super(context);
@@ -53,17 +60,35 @@ public class ScrollerViewPager extends ViewGroup {
         overScroller = new Scroller(context);
         ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
         mTouchSlop = viewConfiguration.getScaledPagingTouchSlop();
+        int screenWidth = DeviceUtil.getScreenWidth((Activity) context);
+        childViewWidth = screenWidth - DeviceUtil.dp2px(20);
+
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//        Log.i(tag, "----onMeasure--widthMeasureSpec:" + widthMeasureSpec + "---heightMeasureSpec:" + heightMeasureSpec);
         //measure childView
         int childCount = getChildCount();
         for (int i = 0; i < childCount; i++) {
-            View childAt = getChildAt(i);
+            View childView = getChildAt(i);
             // measure width/height of the childView and padding of the parentView
-            measureChild(childAt, widthMeasureSpec, heightMeasureSpec);
+            measureChild(childView, widthMeasureSpec, heightMeasureSpec);
+        }
+    }
+
+    @Override
+    protected void onFinishInflate() {
+        super.onFinishInflate();
+        //set childView width
+        for (int i = 0; i < getChildCount(); i++) {
+            View childView = getChildAt(i);
+//            Log.i(tag, "--getChildCount:" + getChildCount() + "---childViewWidth:" + childViewWidth + "--" + childView.getMeasuredHeight());
+//            Log.i(tag, "--getChildHeight--getHeight:" + childView.getHeight() + "--getMeasuredHeight:" + childView.getMeasuredHeight());
+            LayoutParams layoutParams = childView.getLayoutParams();
+            layoutParams.width = childViewWidth;
+            childView.setLayoutParams(layoutParams);
         }
     }
 
@@ -86,6 +111,14 @@ public class ScrollerViewPager extends ViewGroup {
         Log.i(tag, "--leftBorder:" + leftBorder + "----rightBorder:" + rightBorder);
     }
 
+    /**
+     * onInterceptTouchEvent决定是否将事件传递给子view
+     * return true，拦截事件，不传递给子view,将事件交给onTouchEvent处理
+     * return false，不拦截事件，将event交给childView的 onInterceptTouchEvent
+     *
+     * @param ev
+     * @return
+     */
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         switch (ev.getAction()) {
@@ -98,6 +131,7 @@ public class ScrollerViewPager extends ViewGroup {
                 //计算offset，拦截事件
                 xMove = (int) ev.getRawX();
                 xLastPosition = xMove;
+                Log.i(tag, "---onInterceptTouchEvent---xMove---" + xMove);
                 if (Math.abs(xMove - xDown) > mTouchSlop) {
                     //进行滚动
                     return true;
@@ -107,9 +141,18 @@ public class ScrollerViewPager extends ViewGroup {
         return super.onInterceptTouchEvent(ev);
     }
 
+    /**
+     * onTouchEvent 决定是否消耗事件
+     *
+     * @param event
+     * @return
+     */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                return true;
+
             case MotionEvent.ACTION_MOVE:
                 xMove = (int) event.getRawX();
                 int scrollX = xLastPosition - xMove;
@@ -123,20 +166,23 @@ public class ScrollerViewPager extends ViewGroup {
                     scrollTo(rightBorder - getWidth(), 0);
                     return true;
                 }
+                //滑动内容
                 scrollBy(scrollX, 0);
                 xLastPosition = xMove;
                 break;
 
             case MotionEvent.ACTION_UP: //手指抬起
                 //抬起手指时，确定当前在那个childView:看是否划出当前view的一半宽度
-                int childViewIndex = (int) ((getScrollX() + getWidth() / 2) / getWidth());
+                int childViewIndex = (int) ((getScrollX() + childViewWidth / 2) / childViewWidth);
                 //offset
-                int dx = (int) (childViewIndex * getWidth() - getScrollX());
+                int dx = (int) (childViewIndex * childViewWidth - getScrollX());
+                Log.i(tag, "----childViewIndex:" + childViewIndex + "---" + "---" + getScrollX() + "---dx:" + dx);
                 //开始弹性滑动:
                 overScroller.startScroll(getScrollX(), 0, dx, 0);
                 invalidate();
                 break;
         }
+//        Log.i(tag, "---super.onTouchEvent(event)---" + super.onTouchEvent(event));
         return super.onTouchEvent(event);
     }
 
