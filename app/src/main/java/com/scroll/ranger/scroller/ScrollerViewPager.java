@@ -23,7 +23,9 @@ import com.scroll.ranger.util.DeviceUtil;
  * (2)子view只能使用clickable=true的控件
  * solution:
  * ViewGroup的onTouchEvent默认返回false，将事件传给childView，TextView的onTouchEvent默认也返回false，事件再上传时ViewGroup也不会消费事件，导致无法移动。
- * (3)viewpager每个childView不全屏显示
+ * (3)viewpager每个childView不全屏显示。-finish
+ * (4)viewpager循环滑动。
+ *
  */
 
 public class ScrollerViewPager extends LinearLayout {
@@ -117,9 +119,9 @@ public class ScrollerViewPager extends LinearLayout {
             childAt.layout(childViewLeft, 0, (i + 1) * childAt.getMeasuredWidth(), childAt.getMeasuredHeight());
         }
 
-        leftBorder = getChildAt(0).getLeft() + childViewBorder;
+        leftBorder = getChildAt(0).getLeft() - childViewBorder;
         rightBorder = getChildAt(childCount - 1).getRight() + childViewBorder;
-        Log.i(tag, "--leftBorder:" + leftBorder + "----rightBorder:" + rightBorder);
+        Log.i(tag, "--leftBorder:" + leftBorder + "----rightBorder:" + rightBorder + "--childViewBorder:" + childViewBorder + "--childViewWidth:" + childViewWidth);
     }
 
     /**
